@@ -1,3 +1,0 @@
-"ecr_repo=${{ secrets.ECR_REPO }}" 
-"env_name=prod" 
-"image_uri=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ steps.env.outputs.ecr_repo }}:${{ steps.tag.outputs.image_tag }}" 

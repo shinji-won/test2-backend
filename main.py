@@ -13,8 +13,8 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(title="AI Image Classifier API")
 
 origins = [
-    "http://localhost:3000",        # 로컬 React 테스트용
-    "https://d3s00e84xvu6qq.cloudfront.net" # 👈 이번에 새로 만든 프론트 배포 주소!
+    "http://localhost:3000",       
+    "https://d3s00e84xvu6qq.cloudfront.net"
 ]
 
 # CORS 설정
@@ -32,7 +32,7 @@ app.include_router(predict.router)
 
 @app.get("/")
 def root():
-    return {"message": "EKS 자동 배포"}
+    return {"message": "EKS 자동 배포 완전 성공!!"}
 
 
 @app.get("/health", status_code=status.HTTP_200_OK, tags=["Health"])
