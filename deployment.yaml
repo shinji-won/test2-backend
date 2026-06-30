@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: test-backend-container
-        image: 876762732971.dkr.ecr.ap-northeast-2.amazonaws.com/test-backend:2920366
+        image: 876762732971.dkr.ecr.ap-northeast-2.amazonaws.com/test-backend:59214f4
         ports:
         - containerPort: 8000
         imagePullPolicy: Always
