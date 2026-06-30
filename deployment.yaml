@@ -1,43 +1,6 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: mysql-deployment
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: mysql
-  template:
-    metadata:
-      labels:
-        app: mysql
-    spec:
-      containers:
-      - name: mysql
-        image: mysql:8.0
-        env:
-        - name: MYSQL_ROOT_PASSWORD
-          value: "password"  # 💡 강의용 임시 비밀번호
-        - name: MYSQL_DATABASE
-          value: "testdb"    # 💡 내 FastAPI가 쓰는 DB 이름으로 맞춰주세요
-        ports:
-        - containerPort: 3306
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: mysql-service       # 🚀 중요! 쿠버네티스 내부에서 DB 주소는 이제 'mysql-service'가 됩니다.
-spec:
-  selector:
-    app: mysql
-  ports:
-    - protocol: TCP
-      port: 3306
-      targetPort: 3306
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
   name: test-backend-deployment
   labels:
     app: test-backend
@@ -59,7 +22,8 @@ spec:
         imagePullPolicy: Always
         env:
         - name: DATABASE_URL
-          value: "mysql+pymysql://root:password@mysql-service:3306/testdb" # 🔗 내부망 연결 주소!
+          # RDS 엔드포인트로 연결! (비밀번호는 RDS 생성할 때 입력했던 값 그대로)
+          value: "mysql+pymysql://admin:YourStrongPassword123!@test-backend-db.c3aukygqmo1y.ap-northeast-2.rds.amazonaws.com:3306/testdb"
 ---
 apiVersion: v1
 kind: Service
