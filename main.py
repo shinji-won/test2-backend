@@ -32,7 +32,7 @@ app.include_router(predict.router)
 
 @app.get("/")
 def root():
-    return {"message": "EKS 자동 배포 완전 성공!!"}
+    return {"message": "EKS 자동 배포 완전 성공!!!!"}
 
 
 @app.get("/health", status_code=status.HTTP_200_OK, tags=["Health"])

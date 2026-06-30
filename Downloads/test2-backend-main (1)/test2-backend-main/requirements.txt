@@ -1,8 +1,0 @@
-fastapi
-uvicorn
-sqlalchemy
-pymysql
-pillow
-python-multipart
-requests
-python-dotenv
