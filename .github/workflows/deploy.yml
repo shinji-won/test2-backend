@@ -1,20 +1,24 @@
-name: Build & Push to ECR
+name: Build & Push to ECR (Full GitOps Automation)
 
 on:
   push:
     branches:
       - main
+    # 무한 루프 방지: deployment.yaml만 바뀐 커밋(이 워크플로우 자신이 만든 커밋)은 무시
+    paths-ignore:
+      - 'deployment.yaml'
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
 
     steps:
-    # 1. 깃허브 로봇이 내 코드 다운로드하기
     - name: Checkout source code
       uses: actions/checkout@v3
+      with:
+        # 워크플로우가 직접 commit/push 할 수 있도록 토큰 권한 부여
+        token: ${{ secrets.GITHUB_TOKEN }}
 
-    # 2. AWS 자격증명 설정 (금고에서 열쇠 꺼내 쓰기)
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v2
       with:
@@ -22,24 +26,46 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ap-northeast-2
 
-    # 3. AWS ECR 냉장고 로그인
     - name: Login to Amazon ECR
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v1
 
-    # 4. 도커 이미지 빌드하고 ECR 냉장고에 슛! (Push)
-    #    배포(kubectl apply)는 더 이상 여기서 하지 않음 - ArgoCD가 클러스터 상태를 감시하다가
-    #    자동으로 동기화함 (GitOps 방식)
+    # 이미지 태그를 커밋 SHA의 앞 7자리로 사용 -> 매번 고유한 태그가 생성됨
+    - name: Set image tag
+      id: vars
+      run: echo "tag=$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_OUTPUT
+
     - name: Build, tag, and push image to Amazon ECR
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         ECR_REPOSITORY: test-backend
-        IMAGE_TAG: latest
+        IMAGE_TAG: ${{ steps.vars.outputs.tag }}
       run: |
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
+    # deployment.yaml 안의 이미지 태그 줄을 새 태그로 치환
+    - name: Update deployment.yaml with new image tag
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: test-backend
+        IMAGE_TAG: ${{ steps.vars.outputs.tag }}
+      run: |
+        sed -i "s|image: .*test-backend:.*|image: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG|" deployment.yaml
+        cat deployment.yaml | grep image:
+
+    # 변경된 deployment.yaml을 다시 레포에 commit & push
+    # -> ArgoCD가 이 변경(Git 내용이 진짜로 바뀜)을 감지해서 자동 배포함
+    - name: Commit and push updated deployment.yaml
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add deployment.yaml
+        git commit -m "chore: deploy image ${{ steps.vars.outputs.tag }} [skip ci]" || echo "변경사항 없음, 커밋 생략"
+        git push origin main
+
     - name: Build Complete
       run: |
-        echo "이미지 빌드 및 ECR 푸시 완료!"
-        echo "배포는 ArgoCD가 자동으로 감지해서 처리합니다."
+        echo "✅ 이미지 빌드 + ECR 푸시 + deployment.yaml 자동 업데이트 완료!"
+        echo "Image tag: ${{ steps.vars.outputs.tag }}"
+        echo "ArgoCD가 이 변경을 감지해서 자동으로 배포합니다 (최대 3분 소요)"
