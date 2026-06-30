@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.0
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: "password" # 💡 강의용 임시 비밀번호
+            - name: MYSQL_DATABASE
+              value: "testdb" # 💡 내 FastAPI가 쓰는 DB 이름으로 맞춰주세요
+          ports:
+            - containerPort: 3306
+          # ⚠️ 볼륨 마운트가 없어서 Pod 재시작 시 데이터가 사라짐 (강의/테스트용으로만 적합)
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-service # 🚀 쿠버네티스 내부에서 DB 주소는 'mysql-service'
+spec:
+  selector:
+    app: mysql
+  ports:
+    - protocol: TCP
+      port: 3306
+      targetPort: 3306

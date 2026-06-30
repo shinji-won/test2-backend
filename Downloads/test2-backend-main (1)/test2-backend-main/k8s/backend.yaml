@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-backend-deployment
+  labels:
+    app: test-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: test-backend
+  template:
+    metadata:
+      labels:
+        app: test-backend
+    spec:
+      containers:
+        - name: test-backend-container
+          # CI/CD에서 envsubst로 실제 ECR 이미지 URI(커밋 SHA 태그)로 치환됨
+          image: ${ECR_IMAGE_URI}
+          ports:
+            - containerPort: 8000
+          imagePullPolicy: Always
+          env:
+            - name: DATABASE_URL
+              value: "mysql+pymysql://root:password@mysql-service:3306/testdb" # 🔗 내부망 연결 주소!
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 20
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-backend-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: test-backend
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8000
